@@ -19,7 +19,6 @@ export interface Todo {
   updated_at?: string;
   type: ItemType;
   content?: string; // 用于笔记和日记的正文内容
-  attachments?: string[];
 }
 
 export interface TodoCreate {
@@ -31,7 +30,6 @@ export interface TodoCreate {
   tags?: string;
   type: ItemType;
   content?: string;
-  attachments?: string[];
 }
 
 export interface TodoUpdate {
@@ -43,7 +41,6 @@ export interface TodoUpdate {
   tags?: string;
   type?: ItemType;
   content?: string;
-  attachments?: string[];
 }
 
 export interface TodoListResponse {

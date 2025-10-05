@@ -1,11 +1,14 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import { Todo, TodoCreate, TodoUpdate, TaskStatus, Priority, FilterOptions, ItemType } from '../types';
 import { todoAPI } from '../utils/api';
-import { Plus, Search, Circle, Trash2, FileText, BookOpen, CheckSquare, Menu, X } from 'lucide-react';
+import { Plus, Search, Trash2, FileText, BookOpen, CheckSquare, Menu, X, Eye, Edit3 } from 'lucide-react';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import CommandPalette from '../components/CommandPalette';
 import Badge from '../components/Badge';
 import SkeletonLoader from '../components/SkeletonLoader';
+import MarkdownRenderer from '../components/MarkdownRenderer';
+import { detectFileType, FileType, getFileTypeDisplayName, getFileTypeIcon } from '../utils/fileUtils';
+
 
 const TodoPage: React.FC = () => {
   const [todos, setTodos] = useState<Todo[]>([]);
@@ -14,6 +17,16 @@ const TodoPage: React.FC = () => {
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [autoSaveStatus, setAutoSaveStatus] = useState<string>('');
+
+  // 编辑设置状态
+  const [editorSettings, setEditorSettings] = useState({
+    fontSize: 16,
+    lineHeight: 1.6,
+  });
+
+  // 阅读模式状态
+  const [isReadMode, setIsReadMode] = useState(false);
+  const [detectedFileType, setDetectedFileType] = useState<FileType>(FileType.TEXT);
 
   // 新的表单状态
   const [formData, setFormData] = useState({
@@ -25,6 +38,7 @@ const TodoPage: React.FC = () => {
     tags: '',
     type: ItemType.TASK,
     content: '',
+    attachments: [] as string[],
   });
 
   const [filters, setFilters] = useState<FilterOptions>({
@@ -137,13 +151,64 @@ const TodoPage: React.FC = () => {
     setShowCommandPalette(false);
   }, []);
 
+  const resetForm = () => {
+    setFormData({
+      title: '',
+      description: '',
+      status: TaskStatus.TODO,
+      priority: Priority.MEDIUM,
+      due_date: '',
+      tags: '',
+      type: ItemType.TASK,
+      content: '',
+      attachments: [],
+    });
+    setSelectedTodo(undefined);
+    setIsReadMode(false);
+    setDetectedFileType(FileType.TEXT);
+  };
+
+  const handleCreateTodoDirect = useCallback(async () => {
+    if (!formData.title.trim()) return;
+
+    try {
+      const submitData: TodoCreate = {
+        title: formData.title.trim(),
+        description: formData.description.trim() || undefined,
+        status: formData.status,
+        priority: formData.priority,
+        due_date: formData.due_date ? new Date(formData.due_date).toISOString() : undefined,
+        tags: formData.tags.trim() || undefined,
+        type: formData.type,
+        content: formData.content.trim() || undefined,
+      };
+
+      console.log('=== CREATING TODO ===');
+      console.log('Submit data:', submitData);
+      
+      const createdTodo = await todoAPI.createTodo(submitData);
+      console.log('=== TODO CREATED ===');
+      console.log('Created todo:', createdTodo);
+      
+      // 重置表单
+      resetForm();
+      
+      // 直接刷新数据，不需要重置过滤条件
+      await fetchTodos();
+      
+      console.log('=== DATA REFRESHED ===');
+    } catch (error) {
+      console.error('Failed to create todo:', error);
+    }
+  }, [formData, fetchTodos]);
+
   const handleSave = useCallback(() => {
     if (selectedTodo) {
       handleUpdateTodo(new Event('submit') as any);
     } else {
-      handleCreateTodo(new Event('submit') as any);
+      handleCreateTodoDirect();
     }
-  }, [selectedTodo]);
+  }, [selectedTodo, handleCreateTodoDirect]);
 
   const handleCancel = useCallback(() => {
     if (selectedTodo) {
@@ -157,20 +222,6 @@ const TodoPage: React.FC = () => {
     onCommandPalette: () => setShowCommandPalette(true),
     onCancel: handleCancel
   });
-
-  const resetForm = () => {
-    setFormData({
-      title: '',
-      description: '',
-      status: TaskStatus.TODO,
-      priority: Priority.MEDIUM,
-      due_date: '',
-      tags: '',
-      type: ItemType.TASK,
-      content: '',
-    });
-    setSelectedTodo(undefined);
-  };
 
   const handleCreateTodo = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -271,7 +322,20 @@ const TodoPage: React.FC = () => {
       tags: todo.tags || '',
       type: todo.type || ItemType.TASK,
       content: todo.content || '',
+      attachments: [],
     });
+    
+    // 检测文件类型
+    const fileTypeInfo = detectFileType(todo.title, todo.content || todo.description || '');
+    setDetectedFileType(fileTypeInfo.type);
+    
+    // 如果是 Markdown 文件，默认进入阅读模式
+    if (fileTypeInfo.type === FileType.MARKDOWN) {
+      setIsReadMode(true);
+    } else {
+      setIsReadMode(false);
+    }
+    
     // 移动端选择条目后自动关闭侧边栏
     setShowMobileSidebar(false);
   };
@@ -535,174 +599,121 @@ const TodoPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 右侧主内容区 - 类似飞书/ChatGPT的聊天界面 */}
+      {/* 右侧主内容区 - 全屏可编辑模式 */}
       <div className="flex-1 flex flex-col bg-white min-w-0 h-full lg:h-auto">
-        {/* 详情区域 */}
-        <div className="flex-1 overflow-y-auto">
-          {selectedTodo ? (
-            <div className="h-full flex flex-col">
-              {/* Sticky 子标题栏 */}
-              <div className="sticky top-0 bg-white/80 backdrop-blur border-b border-gray-100 px-6 py-4 z-10">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                      selectedTodo.type === ItemType.TASK ? 'bg-blue-100' :
-                      selectedTodo.type === ItemType.NOTE ? 'bg-green-100' : 'bg-purple-100'
-                    }`}>
-                      {getTypeIcon(selectedTodo.type || ItemType.TASK)}
-                    </div>
-                    <div>
-                      <h1 className="text-lg font-semibold text-gray-900 truncate max-w-md">
-                        {selectedTodo.title}
-                      </h1>
-                      <div className="flex items-center space-x-2 text-sm">
-                        <Badge 
-                          variant="soft" 
-                          color={
-                            selectedTodo.type === ItemType.TASK ? 'blue' :
-                            selectedTodo.type === ItemType.NOTE ? 'green' : 'purple'
-                          }
-                          size="sm"
-                        >
-                          {getTypeLabel(selectedTodo.type || ItemType.TASK)}
-                        </Badge>
-                        <span className="text-gray-500">
-                          {formatTime(selectedTodo.created_at)}
-                        </span>
-                        {/* 只有任务才显示状态标签 */}
-                        {selectedTodo.type === ItemType.TASK && selectedTodo.status && (
-                          <Badge 
-                            variant="soft" 
-                            color={
-                              selectedTodo.status === TaskStatus.DONE ? 'green' :
-                              selectedTodo.status === TaskStatus.DOING ? 'blue' : 'gray'
-                            }
-                            size="sm"
-                          >
-                            {selectedTodo.status === TaskStatus.DONE ? '已完成' :
-                             selectedTodo.status === TaskStatus.DOING ? '进行中' : '待办'}
-                          </Badge>
-                        )}
-                      </div>
+        {selectedTodo ? (
+          <div className="h-full flex flex-col">
+            {/* Sticky 顶部工具栏 */}
+            <div className="sticky top-0 bg-white/95 backdrop-blur border-b border-gray-100 px-6 py-3 z-10">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  {/* 类型选择 */}
+                  <div className="flex space-x-1">
+                    {Object.values(ItemType).map((type) => (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, type })}
+                        className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                          formData.type === type
+                            ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                            : 'text-gray-600 hover:bg-gray-100'
+                        }`}
+                      >
+                        {getTypeIcon(type)}
+                        <span>{getTypeLabel(type)}</span>
+                      </button>
+                    ))}
+                  </div>
+                  
+                  {/* 分隔线 */}
+                  <div className="w-px h-6 bg-gray-200"></div>
+                  
+                  {/* 字体大小控制 */}
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm text-gray-500">字体:</span>
+                    <div className="flex items-center space-x-1">
+                      <button
+                        onClick={() => setEditorSettings(prev => ({ ...prev, fontSize: Math.max(12, prev.fontSize - 2) }))}
+                        className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
+                      >
+                        <span className="text-sm">A</span>
+                      </button>
+                      <span className="text-sm text-gray-600 w-8 text-center">{editorSettings.fontSize}px</span>
+                      <button
+                        onClick={() => setEditorSettings(prev => ({ ...prev, fontSize: Math.min(24, prev.fontSize + 2) }))}
+                        className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
+                      >
+                        <span className="text-base">A</span>
+                      </button>
                     </div>
                   </div>
                   
-                  {/* 操作按钮 */}
+                  {/* 行间距控制 */}
                   <div className="flex items-center space-x-2">
-                    <div className="hidden lg:flex items-center space-x-1 text-xs text-gray-500">
-                      <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-xs">⌘</kbd>
-                      <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-xs">K</kbd>
+                    <span className="text-sm text-gray-500">行距:</span>
+                    <div className="flex items-center space-x-1">
+                      <button
+                        onClick={() => setEditorSettings(prev => ({ ...prev, lineHeight: Math.max(1.2, prev.lineHeight - 0.1) }))}
+                        className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
+                      >
+                        <span className="text-xs">-</span>
+                      </button>
+                      <span className="text-sm text-gray-600 w-8 text-center">{editorSettings.lineHeight.toFixed(1)}</span>
+                      <button
+                        onClick={() => setEditorSettings(prev => ({ ...prev, lineHeight: Math.min(2.5, prev.lineHeight + 0.1) }))}
+                        className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
+                      >
+                        <span className="text-xs">+</span>
+                      </button>
                     </div>
-                    <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
-                      <Menu className="h-4 w-4" />
-                    </button>
                   </div>
-                </div>
-              </div>
-              
-              {/* 条目内容 */}
-              <div className="flex-1 p-6">
-                <div className="max-w-4xl">
-                  {/* 优先显示content字段，如果没有则显示description */}
-                  {(selectedTodo.content || selectedTodo.description) ? (
-                    <div className="prose prose-gray max-w-none">
-                      <div className="whitespace-pre-wrap text-gray-700 leading-relaxed text-base">
-                        {selectedTodo.content || selectedTodo.description}
+                  
+                  {/* 阅读/编辑模式切换 */}
+                  {selectedTodo && (
+                    <>
+                      <div className="w-px h-6 bg-gray-200"></div>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm text-gray-500">模式:</span>
+                        <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
+                          <button
+                            onClick={() => setIsReadMode(true)}
+                            className={`flex items-center space-x-1 px-2 py-1 rounded text-xs font-medium transition-all duration-200 ${
+                              isReadMode 
+                                ? 'bg-white text-blue-700 shadow-sm' 
+                                : 'text-gray-600 hover:text-gray-800'
+                            }`}
+                          >
+                            <Eye className="h-3 w-3" />
+                            <span>阅读</span>
+                          </button>
+                          <button
+                            onClick={() => setIsReadMode(false)}
+                            className={`flex items-center space-x-1 px-2 py-1 rounded text-xs font-medium transition-all duration-200 ${
+                              !isReadMode 
+                                ? 'bg-white text-blue-700 shadow-sm' 
+                                : 'text-gray-600 hover:text-gray-800'
+                            }`}
+                          >
+                            <Edit3 className="h-3 w-3" />
+                            <span>编辑</span>
+                          </button>
+                        </div>
+                        {/* 文件类型指示器 */}
+                        <div className="flex items-center space-x-1 text-xs text-gray-500">
+                          <span>{getFileTypeIcon(detectedFileType)}</span>
+                          <span>{getFileTypeDisplayName(detectedFileType)}</span>
+                        </div>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-12 text-gray-400">
-                      <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-                        <FileText className="h-8 w-8 text-gray-400" />
-                      </div>
-                      <p className="text-lg font-medium mb-2">暂无详细内容</p>
-                      <p className="text-sm">在下方编辑区域添加内容</p>
-                    </div>
+                    </>
                   )}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center text-gray-500">
-                <div className="w-20 h-20 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-                  <Circle className="h-10 w-10 text-gray-400" />
-                </div>
-                <h3 className="text-lg font-medium mb-2 text-gray-700">选择一个条目查看详情</h3>
-                <p className="text-gray-400 mb-4">或在下方创建新内容</p>
-                <div className="flex justify-center space-x-1">
-                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
-                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* 输入区域 - 类似飞书/ChatGPT的底部输入框 */}
-        <div className="border-t border-gray-200 bg-white">
-          <div className="p-4">
-            <div className="max-w-4xl mx-auto">
-              <form onSubmit={selectedTodo ? handleUpdateTodo : handleCreateTodo} className="space-y-4">
-                {/* 类型选择 */}
-                <div className="flex space-x-2">
-                  {Object.values(ItemType).map((type) => (
-                    <button
-                      key={type}
-                      type="button"
-                      onClick={() => setFormData({ ...formData, type })}
-                      className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                        formData.type === type
-                          ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                          : 'text-gray-600 hover:bg-gray-100'
-                      }`}
-                    >
-                      {getTypeIcon(type)}
-                      <span>{getTypeLabel(type)}</span>
-                    </button>
-                  ))}
-                </div>
-
-                {/* 标题输入 */}
-                <div>
-                  <input
-                    type="text"
-                    required
-                    className="modern-input"
-                    placeholder="输入标题... (回车保存，Shift+回车换行)"
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSave();
-                      }
-                    }}
-                  />
-                </div>
-
-                {/* 内容输入 */}
-                <div className="relative">
-                  <textarea
-                    rows={3}
-                    className="modern-input resize-none"
-                    placeholder={formData.type === ItemType.TASK ? '详细描述任务内容...' : '输入内容...'}
-                    value={formData.content}
-                    onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSave();
-                      }
-                    }}
-                  />
                   
                   {/* 只有任务类型才显示状态和优先级选择 */}
                   {formData.type === ItemType.TASK && (
-                    <div className="mt-3 flex space-x-3">
+                    <>
+                      <div className="w-px h-6 bg-gray-200"></div>
                       <select
-                        className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
+                        className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
                         value={formData.status}
                         onChange={(e) => setFormData({ ...formData, status: e.target.value as TaskStatus })}
                       >
@@ -712,7 +723,7 @@ const TodoPage: React.FC = () => {
                       </select>
                       
                       <select
-                        className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
+                        className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
                         value={formData.priority}
                         onChange={(e) => setFormData({ ...formData, priority: e.target.value as Priority })}
                       >
@@ -721,45 +732,304 @@ const TodoPage: React.FC = () => {
                         <option value={Priority.HIGH}>高优先级</option>
                         <option value={Priority.URGENT}>紧急</option>
                       </select>
+                    </>
+                  )}
+                </div>
+                
+                {/* 右侧操作按钮 */}
+                <div className="flex items-center space-x-2">
+                  <div className="hidden lg:flex items-center space-x-1 text-xs text-gray-500">
+                    <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-xs">⌘</kbd>
+                    <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-xs">S</kbd>
+                  </div>
+                  {selectedTodo && (
+                    <button
+                      type="button"
+                      onClick={resetForm}
+                      className="px-3 py-1.5 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-all duration-200 text-sm font-medium"
+                    >
+                      取消
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleSave}
+                    className="btn-primary text-sm"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>{selectedTodo ? '保存' : '创建'}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            {/* 全屏编辑区域 */}
+            <div className="flex-1 overflow-hidden">
+              <form onSubmit={selectedTodo ? handleUpdateTodo : handleCreateTodo} className="h-full flex flex-col">
+                {/* 标题编辑区域 */}
+                <div className="border-b border-gray-100">
+                  <input
+                    type="text"
+                    required
+                    className="w-full px-6 py-4 text-2xl font-semibold bg-transparent border-none outline-none placeholder-gray-400"
+                    placeholder="输入标题..."
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    style={{
+                      fontSize: `${Math.max(20, editorSettings.fontSize + 4)}px`,
+                      lineHeight: editorSettings.lineHeight,
+                    }}
+                  />
+                </div>
+                
+                {/* 内容编辑区域 */}
+                <div className="flex-1 relative">
+                  {isReadMode ? (
+                    /* 阅读模式 - Markdown 渲染 */
+                    <div className="absolute inset-0 px-6 py-4 overflow-y-auto">
+                      {detectedFileType === FileType.MARKDOWN ? (
+                        <MarkdownRenderer 
+                          content={formData.content || formData.description || ''} 
+                          className="prose prose-gray max-w-none"
+                        />
+                      ) : (
+                        /* 普通文本显示 */
+                        <div 
+                          className="whitespace-pre-wrap text-gray-700 leading-relaxed"
+                          style={{
+                            fontSize: `${editorSettings.fontSize}px`,
+                            lineHeight: editorSettings.lineHeight,
+                          }}
+                        >
+                          {formData.content || formData.description || '暂无内容'}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    /* 编辑模式 - 文本输入 */
+                    <textarea
+                      className="w-full h-full px-6 py-4 resize-none border-none outline-none bg-transparent placeholder-gray-400"
+                      placeholder={formData.type === ItemType.TASK ? '详细描述任务内容...' : '输入内容...'}
+                      value={formData.content}
+                      onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                      style={{
+                        fontSize: `${editorSettings.fontSize}px`,
+                        lineHeight: editorSettings.lineHeight,
+                      }}
+                    />
+                  )}
+                  
+                  {/* 自动保存状态 */}
+                  {autoSaveStatus && !isReadMode && (
+                    <div className="absolute bottom-4 right-4 text-xs text-green-600 bg-green-50 px-3 py-1.5 rounded-lg shadow-sm border border-green-200">
+                      {autoSaveStatus}
+                    </div>
+                  )}
+                  
+                  {/* 阅读模式提示 */}
+                  {isReadMode && (
+                    <div className="absolute bottom-4 right-4 text-xs text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg shadow-sm border border-blue-200">
+                      阅读模式 - 点击"编辑"按钮进行修改
                     </div>
                   )}
                 </div>
-
-                {/* 操作按钮 */}
-                <div className="flex justify-between items-center">
-                  <div className="text-sm text-gray-500">
-                    {selectedTodo ? '编辑模式' : '创建新条目'}
-                  </div>
-                  <div className="flex space-x-2">
-                    {selectedTodo && (
-                      <button
-                        type="button"
-                        onClick={resetForm}
-                        className="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-all duration-200 font-medium"
-                      >
-                        取消
-                      </button>
-                    )}
-                    <button
-                      type="submit"
-                      className="btn-primary"
-                    >
-                      <Plus className="h-4 w-4" />
-                      <span>{selectedTodo ? '更新' : '创建'}</span>
-                    </button>
-                  </div>
-                </div>
-                
-                {/* 自动保存状态 - 右下角 */}
-                {autoSaveStatus && (
-                  <div className="absolute bottom-4 right-4 text-xs text-green-600 bg-green-50 px-3 py-1.5 rounded-lg shadow-sm border border-green-200">
-                    {autoSaveStatus}
-                  </div>
-                )}
               </form>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="h-full flex flex-col">
+            {/* 空状态时的顶部工具栏 */}
+            <div className="sticky top-0 bg-white/95 backdrop-blur border-b border-gray-100 px-6 py-3 z-10">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  {/* 类型选择 */}
+                  <div className="flex space-x-1">
+                    {Object.values(ItemType).map((type) => (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, type })}
+                        className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                          formData.type === type
+                            ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                            : 'text-gray-600 hover:bg-gray-100'
+                        }`}
+                      >
+                        {getTypeIcon(type)}
+                        <span>{getTypeLabel(type)}</span>
+                      </button>
+                    ))}
+                  </div>
+                  
+                  {/* 分隔线 */}
+                  <div className="w-px h-6 bg-gray-200"></div>
+                  
+                  {/* 字体大小控制 */}
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm text-gray-500">字体:</span>
+                    <div className="flex items-center space-x-1">
+                      <button
+                        onClick={() => setEditorSettings(prev => ({ ...prev, fontSize: Math.max(12, prev.fontSize - 2) }))}
+                        className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
+                      >
+                        <span className="text-sm">A</span>
+                      </button>
+                      <span className="text-sm text-gray-600 w-8 text-center">{editorSettings.fontSize}px</span>
+                      <button
+                        onClick={() => setEditorSettings(prev => ({ ...prev, fontSize: Math.min(24, prev.fontSize + 2) }))}
+                        className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
+                      >
+                        <span className="text-base">A</span>
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {/* 行间距控制 */}
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm text-gray-500">行距:</span>
+                    <div className="flex items-center space-x-1">
+                      <button
+                        onClick={() => setEditorSettings(prev => ({ ...prev, lineHeight: Math.max(1.2, prev.lineHeight - 0.1) }))}
+                        className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
+                      >
+                        <span className="text-xs">-</span>
+                      </button>
+                      <span className="text-sm text-gray-600 w-8 text-center">{editorSettings.lineHeight.toFixed(1)}</span>
+                      <button
+                        onClick={() => setEditorSettings(prev => ({ ...prev, lineHeight: Math.min(2.5, prev.lineHeight + 0.1) }))}
+                        className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
+                      >
+                        <span className="text-xs">+</span>
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {/* 阅读/编辑模式切换 */}
+                  {selectedTodo && (
+                    <>
+                      <div className="w-px h-6 bg-gray-200"></div>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm text-gray-500">模式:</span>
+                        <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
+                          <button
+                            onClick={() => setIsReadMode(true)}
+                            className={`flex items-center space-x-1 px-2 py-1 rounded text-xs font-medium transition-all duration-200 ${
+                              isReadMode 
+                                ? 'bg-white text-blue-700 shadow-sm' 
+                                : 'text-gray-600 hover:text-gray-800'
+                            }`}
+                          >
+                            <Eye className="h-3 w-3" />
+                            <span>阅读</span>
+                          </button>
+                          <button
+                            onClick={() => setIsReadMode(false)}
+                            className={`flex items-center space-x-1 px-2 py-1 rounded text-xs font-medium transition-all duration-200 ${
+                              !isReadMode 
+                                ? 'bg-white text-blue-700 shadow-sm' 
+                                : 'text-gray-600 hover:text-gray-800'
+                            }`}
+                          >
+                            <Edit3 className="h-3 w-3" />
+                            <span>编辑</span>
+                          </button>
+                        </div>
+                        {/* 文件类型指示器 */}
+                        <div className="flex items-center space-x-1 text-xs text-gray-500">
+                          <span>{getFileTypeIcon(detectedFileType)}</span>
+                          <span>{getFileTypeDisplayName(detectedFileType)}</span>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                  
+                  {/* 只有任务类型才显示状态和优先级选择 */}
+                  {formData.type === ItemType.TASK && (
+                    <>
+                      <div className="w-px h-6 bg-gray-200"></div>
+                      <select
+                        className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
+                        value={formData.status}
+                        onChange={(e) => setFormData({ ...formData, status: e.target.value as TaskStatus })}
+                      >
+                        <option value={TaskStatus.TODO}>待办</option>
+                        <option value={TaskStatus.DOING}>进行中</option>
+                        <option value={TaskStatus.DONE}>已完成</option>
+                      </select>
+                      
+                      <select
+                        className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
+                        value={formData.priority}
+                        onChange={(e) => setFormData({ ...formData, priority: e.target.value as Priority })}
+                      >
+                        <option value={Priority.LOW}>低优先级</option>
+                        <option value={Priority.MEDIUM}>中优先级</option>
+                        <option value={Priority.HIGH}>高优先级</option>
+                        <option value={Priority.URGENT}>紧急</option>
+                      </select>
+                    </>
+                  )}
+                </div>
+                
+                {/* 右侧操作按钮 */}
+                <div className="flex items-center space-x-2">
+                  <div className="hidden lg:flex items-center space-x-1 text-xs text-gray-500">
+                    <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-xs">⌘</kbd>
+                    <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-xs">S</kbd>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleSave}
+                    className="btn-primary text-sm"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>创建</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            {/* 创建新条目的编辑区域 */}
+            <div className="flex-1 overflow-hidden">
+              <form onSubmit={handleCreateTodo} className="h-full flex flex-col">
+                {/* 标题编辑区域 */}
+                <div className="border-b border-gray-100">
+                  <input
+                    type="text"
+                    required
+                    className="w-full px-6 py-4 text-2xl font-semibold bg-transparent border-none outline-none placeholder-gray-400"
+                    placeholder="输入标题..."
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    style={{
+                      fontSize: `${Math.max(20, editorSettings.fontSize + 4)}px`,
+                      lineHeight: editorSettings.lineHeight,
+                    }}
+                  />
+                </div>
+                
+                {/* 内容编辑区域 */}
+                <div className="flex-1 relative">
+                  <textarea
+                    className="w-full h-full px-6 py-4 resize-none border-none outline-none bg-transparent placeholder-gray-400"
+                    placeholder={formData.type === ItemType.TASK ? '详细描述任务内容...' : '输入内容...'}
+                    value={formData.content}
+                    onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                    style={{
+                      fontSize: `${editorSettings.fontSize}px`,
+                      lineHeight: editorSettings.lineHeight,
+                    }}
+                  />
+                  
+                  {/* 创建提示 */}
+                  <div className="absolute bottom-4 left-6 text-xs text-gray-400">
+                    输入内容后点击右上角"创建"按钮或使用 ⌘+S 保存
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 命令面板 */}

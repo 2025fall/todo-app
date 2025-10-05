@@ -40,10 +40,6 @@ export const useKeyboardShortcuts = ({
         if (event.metaKey || event.ctrlKey) {
           event.preventDefault();
           onNewItem?.();
-        } else if (!event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey) {
-          // 单独的 N 键
-          event.preventDefault();
-          onNewItem?.();
         }
         break;
       case 's':

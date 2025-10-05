@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Enum, JSON
+from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Enum
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -47,7 +47,6 @@ class Todo(Base):
     tags = Column(String(500), nullable=True)  # 存储为逗号分隔的字符串
     type = Column(Enum(ItemType), default=ItemType.TASK, nullable=False)
     content = Column(Text, nullable=True)  # 用于笔记和日记的正文内容
-    attachments = Column(JSON, nullable=True)  # 存储图片的 base64 列表
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)

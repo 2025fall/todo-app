@@ -55,7 +55,6 @@ class TodoBase(BaseModel):
     tags: Optional[str] = None
     type: ItemType = ItemType.TASK
     content: Optional[str] = None
-    attachments: Optional[List[str]] = None
 
     @validator('title')
     def validate_title(cls, v):
@@ -77,7 +76,6 @@ class TodoUpdate(BaseModel):
     tags: Optional[str] = None
     type: Optional[ItemType] = None
     content: Optional[str] = None
-    attachments: Optional[List[str]] = None
 
     @validator('title')
     def validate_title(cls, v):
