@@ -4,14 +4,11 @@ backend/venv/
 backend/__pycache__/
 backend/app/__pycache__/
 backend/app/routers/__pycache__/
-frontend/node_modules/
 
 # Database
 *.db
 *.sqlite
 *.sqlite3
-todo.db
-todo.db.backup
 
 # Environment variables
 .env
@@ -25,7 +22,6 @@ todo.db.backup
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-lerna-debug.log*
 
 # Runtime data
 pids
@@ -35,7 +31,6 @@ pids
 
 # Coverage directory used by tools like istanbul
 coverage/
-*.lcov
 
 # nyc test coverage
 .nyc_output
@@ -55,27 +50,24 @@ jspm_packages/
 # Yarn Integrity file
 .yarn-integrity
 
+# dotenv environment variables file
+.env
+
 # parcel-bundler cache (https://parceljs.org/)
 .cache
 .parcel-cache
 
-# Next.js build output
+# next.js build output
 .next
-out/
 
-# Nuxt.js build / generate output
+# nuxt.js build output
 .nuxt
-dist
 
-# Gatsby files
-.cache/
-public
-
-# Vuepress build output
+# vuepress build output
 .vuepress/dist
 
 # Serverless directories
-.serverless/
+.serverless
 
 # FuseBox cache
 .fusebox/
@@ -94,74 +86,18 @@ public
 .idea/
 *.swp
 *.swo
-*~
 
 # OS
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
 
 # Build outputs
 dist/
 build/
-frontend/dist/
-frontend/build/
 
 # Temporary files
 *.tmp
 *.temp
-*.bak
-*.backup
 
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-.hypothesis/
 
-# TypeScript
-*.tsbuildinfo
 
-# ESLint
-.eslintcache
-
-# Prettier
-.prettierignore
-
-# Stylelint
-.stylelintcache
-
-# Webpack
-.webpack/
-
-# Vite
-.vite/
-
-# Archive files
-*.zip
-*.tar.gz
-*.rar
-todo-app-for-github.zip
-
-# Local development
-.local
-.cache
