@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Plus, FileText, BookOpen, CheckSquare } from 'lucide-react';
+import { Search, FileText, BookOpen, CheckSquare } from 'lucide-react';
 import { ItemType } from '../types';
 
 interface CommandPaletteProps {

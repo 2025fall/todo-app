@@ -1,7 +1,10 @@
-import axios from 'axios';
+import axios, { AxiosHeaders } from 'axios';
 import { User, Todo, TodoCreate, TodoUpdate, TodoListResponse, TodoStats, FilterOptions } from '../types';
+import { saveTodoListCache, getCachedTodoList } from './offlineCache';
+import { devLog, devError } from './devLogger';
 
-const API_BASE_URL = 'http://localhost:8001';
+const API_BASE_URL =
+  (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? 'http://localhost:8001';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -9,34 +12,45 @@ const api = axios.create({
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
-  console.log('=== API REQUEST ===');
-  console.log('Method:', config.method?.toUpperCase());
-  console.log('URL:', config.baseURL + config.url);
-  console.log('Token available:', !!token);
+  devLog('=== API REQUEST ===');
+  devLog('Method:', config.method?.toUpperCase());
+  const base = config.baseURL ?? '';
+  const url = config.url ?? '';
+  devLog('URL:', `${base}${url}`);
+  devLog('Token available:', !!token);
   if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-    console.log('Headers:', config.headers);
+    const headers =
+      config.headers instanceof AxiosHeaders
+        ? config.headers
+        : new AxiosHeaders(config.headers ?? undefined);
+
+    headers.set('Authorization', `Bearer ${token}`);
+    config.headers = headers;
+    devLog('Headers:', headers.toJSON());
   } else {
-    console.log('No token found in localStorage');
+    devLog('No token found in localStorage');
   }
-  console.log('Data:', config.data);
+  devLog('Data:', config.data);
   return config;
 });
 
+const isBrowser = typeof window !== 'undefined';
+const isOffline = () => isBrowser && navigator.onLine === false;
+
 api.interceptors.response.use(
   (response) => {
-    console.log('=== API RESPONSE ===');
-    console.log('Status:', response.status);
-    console.log('URL:', response.config.url);
-    console.log('Data:', response.data);
+    devLog('=== API RESPONSE ===');
+    devLog('Status:', response.status);
+    devLog('URL:', response.config.url);
+    devLog('Data:', response.data);
     return response;
   },
   (error) => {
-    console.log('=== API ERROR ===');
-    console.log('Error:', error);
-    console.log('Status:', error.response?.status);
-    console.log('Data:', error.response?.data);
-    console.log('Message:', error.message);
+    devLog('=== API ERROR ===');
+    devError('Error:', error);
+    devLog('Status:', error.response?.status);
+    devLog('Data:', error.response?.data);
+    devLog('Message:', error.message);
     return Promise.reject(error);
   }
 );
@@ -70,8 +84,26 @@ export const todoAPI = {
     if (options.overdue_only) params.append('overdue_only', 'true');
     if (options.type) params.append('type', options.type);
 
-    const response = await api.get(`/todos/?${params.toString()}`);
-    return response.data;
+    if (isOffline()) {
+      const cached = getCachedTodoList();
+      if (cached) {
+        return cached;
+      }
+    }
+
+    try {
+      const response = await api.get(`/todos/?${params.toString()}`);
+      saveTodoListCache(response.data);
+      return response.data;
+    } catch (error) {
+      if (isOffline()) {
+        const cached = getCachedTodoList();
+        if (cached) {
+          return cached;
+        }
+      }
+      throw error;
+    }
   },
 
   getTodoStats: async (): Promise<TodoStats> => {
@@ -80,16 +112,25 @@ export const todoAPI = {
   },
 
   createTodo: async (todo: TodoCreate): Promise<Todo> => {
+    if (isOffline()) {
+      throw new Error('Cannot create todos while offline.');
+    }
     const response = await api.post('/todos/', todo);
     return response.data;
   },
 
   updateTodo: async (id: number, todo: TodoUpdate): Promise<Todo> => {
+    if (isOffline()) {
+      throw new Error('Cannot update todos while offline.');
+    }
     const response = await api.put(`/todos/${id}`, todo);
     return response.data;
   },
 
   deleteTodo: async (id: number): Promise<void> => {
+    if (isOffline()) {
+      throw new Error('Cannot delete todos while offline.');
+    }
     await api.delete(`/todos/${id}`);
   },
 

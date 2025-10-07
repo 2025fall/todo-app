@@ -1,4 +1,4 @@
-# 📝 现代化 Todo 应用
+﻿# 📝 现代化 Todo 应用
 
 一个功能完整的全栈待办事项管理应用，支持任务、笔记、日记三种类型，提供类似飞书/ChatGPT的现代化用户体验。
 
@@ -31,6 +31,25 @@ npm run dev
 1. 打开 http://localhost:3001
 2. 点击"注册"创建账户
 3. 登录后即可开始使用
+
+## 📱 移动端PWA部署
+
+1. **构建前端资源**: 在`frontend`目录运行`npm run build`，生成可安装的`frontend/dist`包
+2. **HTTPS托管**: 将`frontend/dist`文件夹部署到HTTPS静态托管服务（Vercel、Netlify、Cloudflare Pages、GitHub Pages + CDN或Nginx）
+3. **安全暴露后端**: 确保API端点通过HTTPS提供服务，并将生产域名添加到后端CORS设置中
+4. **移动端安装**: 在移动浏览器中打开部署的URL，使用"添加到主屏幕"安装应用
+5. **离线行为**: 首次成功登录后，应用会缓存manifest、shell和最新的待办列表，支持离线浏览
+
+### 本地PWA测试
+
+- 使用`npm run dev`配合Chrome DevTools > Application来模拟离线模式
+- 构建后运行`npm run preview`来验证service worker和安装提示是否与生产包一致
+
+### Git分支策略 (桌面端 + 移动端)
+
+1. 保持`main`作为稳定的桌面端体验；可选择创建`desktop-stable`分支来冻结当前的PC构建
+2. 使用`feature/mobile-pwa`分支进行移动端和PWA功能的演进
+3. 定期将移动端改进合并回`main`，确保桌面端和移动端功能同步
 
 ## ✨ 核心功能
 
@@ -203,6 +222,61 @@ npm run dev
 2. 检查后端终端错误日志  
 3. 确认端口没有被其他程序占用
 4. 尝试重启服务
+
+## 🌐 云端部署 (Vercel + Railway)
+
+### 部署步骤
+
+#### 1. 后端部署到Railway
+```bash
+# 1. 访问 https://railway.app
+# 2. 连接GitHub仓库
+# 3. 选择backend目录
+# 4. 设置环境变量:
+#    - DATABASE_URL (自动生成)
+#    - SECRET_KEY (随机生成)
+#    - CORS_ORIGINS (前端域名)
+# 5. 等待部署完成
+```
+
+#### 2. 前端部署到Vercel
+```bash
+# 1. 构建前端
+cd frontend
+npm run build
+
+# 2. 访问 https://vercel.com
+# 3. 拖拽dist文件夹
+# 4. 设置环境变量:
+#    - VITE_API_BASE_URL (Railway后端地址)
+# 5. 重新部署
+```
+
+#### 3. 验证部署
+```bash
+# 测试清单:
+- [ ] 前端可以访问
+- [ ] 后端API正常
+- [ ] 数据库连接成功
+- [ ] 跨域配置正确
+- [ ] PWA功能正常
+- [ ] 离线功能可用
+```
+
+### 环境变量配置
+
+#### 前端环境变量 (.env)
+```bash
+VITE_API_BASE_URL=https://your-backend.railway.app
+```
+
+#### 后端环境变量 (Railway)
+```bash
+DATABASE_URL=postgresql://...
+SECRET_KEY=your-secret-key
+CORS_ORIGINS=https://your-frontend.vercel.app
+PORT=8000
+```
 
 ## 📄 许可证
 

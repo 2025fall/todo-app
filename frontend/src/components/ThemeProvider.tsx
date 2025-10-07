@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { devLog } from '../utils/devLogger';
 
 type Theme = 'light' | 'dark';
 
@@ -15,15 +16,15 @@ const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
   const applyTheme = (newTheme: Theme) => {
     const root = document.documentElement;
-    console.log('Applying theme:', newTheme);
+    devLog('Applying theme:', newTheme);
     if (newTheme === 'dark') {
       root.classList.add('dark');
-      console.log('Added dark class');
+      devLog('Added dark class');
     } else {
       root.classList.remove('dark');
-      console.log('Removed dark class');
+      devLog('Removed dark class');
     }
-    console.log('Root classes:', root.className);
+    devLog('Root classes:', root.className);
   };
 
   const setTheme = (newTheme: Theme) => {

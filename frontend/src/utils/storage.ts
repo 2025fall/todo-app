@@ -1,4 +1,5 @@
 // 本地存储工具
+import { devError } from './devLogger';
 export class LocalStorage {
   private static prefix = 'todo-app-';
 
@@ -6,7 +7,7 @@ export class LocalStorage {
     try {
       localStorage.setItem(this.prefix + key, JSON.stringify(value));
     } catch (error) {
-      console.error('Failed to save to localStorage:', error);
+      devError('Failed to save to localStorage:', error);
     }
   }
 
@@ -15,7 +16,7 @@ export class LocalStorage {
       const item = localStorage.getItem(this.prefix + key);
       return item ? JSON.parse(item) : defaultValue || null;
     } catch (error) {
-      console.error('Failed to read from localStorage:', error);
+      devError('Failed to read from localStorage:', error);
       return defaultValue || null;
     }
   }
@@ -24,7 +25,7 @@ export class LocalStorage {
     try {
       localStorage.removeItem(this.prefix + key);
     } catch (error) {
-      console.error('Failed to remove from localStorage:', error);
+      devError('Failed to remove from localStorage:', error);
     }
   }
 
@@ -37,7 +38,7 @@ export class LocalStorage {
         }
       });
     } catch (error) {
-      console.error('Failed to clear localStorage:', error);
+      devError('Failed to clear localStorage:', error);
     }
   }
 }
@@ -72,7 +73,7 @@ export class DraftManager {
   }
 
   static getDrafts(): Record<string, any> {
-    return LocalStorage.get(this.DRAFT_KEY, {});
+    return LocalStorage.get<Record<string, any>>(this.DRAFT_KEY, {}) ?? {};
   }
 
   static removeDraft(id: string): void {
@@ -130,7 +131,7 @@ export class SyncQueue {
   }
 
   static getQueue(): Array<{id: string, action: string, data: any, timestamp: string}> {
-    return LocalStorage.get(this.QUEUE_KEY, []);
+    return LocalStorage.get<Array<{ id: string; action: string; data: any; timestamp: string }>>(this.QUEUE_KEY, []) ?? [];
   }
 
   static clearQueue(): void {
@@ -148,7 +149,7 @@ export class SyncQueue {
         const updatedQueue = queue.filter(q => q.id !== item.id);
         LocalStorage.set(this.QUEUE_KEY, updatedQueue);
       } catch (error) {
-        console.error('Failed to sync item:', item, error);
+        devError('Failed to sync item:', item, error);
         // 失败时保留在队列中，稍后重试
       }
     }

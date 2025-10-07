@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Search, Filter, FileText, CheckSquare, BookOpen } from 'lucide-react';
+import { Plus, Search, Filter } from 'lucide-react';
 
 interface EmptyStateProps {
   type: 'no-items' | 'no-search-results' | 'no-filter-results';

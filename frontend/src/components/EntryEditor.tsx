@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Todo, TodoCreate, TodoUpdate, TaskStatus, Priority, ItemType } from '../types';
-import { Save, RotateCcw, Bold, List, Quote, Code, CheckSquare } from 'lucide-react';
+import { Save, Bold, List, Quote, Code, CheckSquare } from 'lucide-react';
 import TypeSelector from './TypeSelector';
+import { devError } from '../utils/devLogger';
 
 interface EntryEditorProps {
   todo?: Todo;
@@ -31,7 +32,7 @@ const EntryEditor: React.FC<EntryEditorProps> = ({
   const [autoSaveStatus, setAutoSaveStatus] = useState<string>('');
   const titleInputRef = useRef<HTMLInputElement>(null);
   const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
-  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 初始化表单数据
   useEffect(() => {
@@ -106,7 +107,7 @@ const EntryEditor: React.FC<EntryEditorProps> = ({
         
         setTimeout(() => setAutoSaveStatus(''), 3000);
       } catch (error) {
-        console.error('Auto-save failed:', error);
+        devError('Auto-save failed:', error);
         setAutoSaveStatus('自动保存失败');
       }
     }

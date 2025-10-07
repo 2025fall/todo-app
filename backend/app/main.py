@@ -1,3 +1,6 @@
+import os
+from typing import List
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from .routers import auth, todos
@@ -24,22 +27,40 @@ async def log_requests(request: Request, call_next):
     print(f"=== RESPONSE: {response.status_code} ===")
     return response
 
+def _build_allowed_origins() -> List[str]:
+    default_origins = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3001",
+        "http://localhost:3002",
+        "http://127.0.0.1:3002",
+        "http://localhost:3003",
+        "http://127.0.0.1:3003",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]
+
+    extra_origins = os.getenv("CORS_ORIGINS")
+    if extra_origins:
+        default_origins.extend(
+            origin.strip()
+            for origin in extra_origins.split(",")
+            if origin.strip()
+        )
+
+    # Deduplicate while preserving order
+    seen = set()
+    ordered = []
+    for origin in default_origins:
+        if origin not in seen and origin:
+            seen.add(origin)
+            ordered.append(origin)
+    return ordered
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3001", 
-        "http://127.0.0.1:3001",
-        "http://localhost:3002", 
-        "http://127.0.0.1:3002",
-        "http://localhost:3003", 
-        "http://127.0.0.1:3003",
-        "http://localhost:3004", 
-        "http://127.0.0.1:3004",
-        "http://localhost:3005", 
-        "http://127.0.0.1:3005",
-        "http://localhost:3006", 
-        "http://127.0.0.1:3006",
-    ],
+    allow_origins=_build_allowed_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

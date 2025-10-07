@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, Clock, FileText, CheckSquare, BookOpen } from 'lucide-react';
+import { Search, X, FileText, CheckSquare, BookOpen } from 'lucide-react';
 import { Todo, ItemType, TaskStatus } from '../types';
 
 interface SearchBarProps {

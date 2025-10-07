@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { Todo, TodoCreate, TodoUpdate, TaskStatus, Priority, FilterOptions, ItemType } from '../types';
 import { todoAPI } from '../utils/api';
 import { Plus, Search, Trash2, FileText, BookOpen, CheckSquare, Menu, X, Eye, Edit3 } from 'lucide-react';
@@ -6,8 +6,12 @@ import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import CommandPalette from '../components/CommandPalette';
 import Badge from '../components/Badge';
 import SkeletonLoader from '../components/SkeletonLoader';
-import MarkdownRenderer from '../components/MarkdownRenderer';
 import { detectFileType, FileType, getFileTypeDisplayName, getFileTypeIcon } from '../utils/fileUtils';
+import { useNetworkStatus } from '../hooks/useNetworkStatus';
+import { getCachedTodoList, getTodoCacheTimestamp } from '../utils/offlineCache';
+import { devLog, devError } from '../utils/devLogger';
+
+const MarkdownRenderer = React.lazy(() => import('../components/MarkdownRenderer'));
 
 
 const TodoPage: React.FC = () => {
@@ -17,6 +21,10 @@ const TodoPage: React.FC = () => {
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [autoSaveStatus, setAutoSaveStatus] = useState<string>('');
+  const isOnline = useNetworkStatus();
+  const [isCacheFallback, setIsCacheFallback] = useState(false);
+  const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // 编辑设置状态
   const [editorSettings, setEditorSettings] = useState({
@@ -61,9 +69,10 @@ const TodoPage: React.FC = () => {
   const fetchTodos = useCallback(async (page = pagination.page) => {
     try {
       setLoading(true);
-      console.log('=== FETCHING TODOS ===');
-      console.log('Filters:', filters);
-      console.log('Page:', page);
+      setErrorMessage(null);
+      devLog('=== FETCHING TODOS ===');
+      devLog('Filters:', filters);
+      devLog('Page:', page);
 
       const response = await todoAPI.getTodos({
         ...filters,
@@ -71,10 +80,10 @@ const TodoPage: React.FC = () => {
         limit: 20,
       });
 
-      console.log('=== TODO RESPONSE ===');
-      console.log('Response:', response);
-      console.log('Todos count:', response.todos.length);
-      console.log('Total:', response.total);
+      devLog('=== TODO RESPONSE ===');
+      devLog('Response:', response);
+      devLog('Todos count:', response.todos.length);
+      devLog('Total:', response.total);
 
       setTodos(response.todos);
       setPagination({
@@ -82,12 +91,41 @@ const TodoPage: React.FC = () => {
         total: response.total,
         totalPages: response.total_pages,
       });
+
+      if (isOnline) {
+        setIsCacheFallback(false);
+        setLastSyncedAt(Date.now());
+      } else {
+        setIsCacheFallback(true);
+        const cachedTimestamp = getTodoCacheTimestamp();
+        setLastSyncedAt(cachedTimestamp);
+      }
     } catch (error) {
-      console.error('Failed to fetch todos:', error);
+      devError('Failed to fetch todos:', error);
+
+      const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+      if (offline) {
+        const cached = getCachedTodoList();
+        if (cached) {
+          setTodos(cached.todos);
+          setPagination({
+            page: cached.page,
+            total: cached.total,
+            totalPages: cached.total_pages,
+          });
+          setIsCacheFallback(true);
+          const cachedTimestamp = getTodoCacheTimestamp();
+          setLastSyncedAt(cachedTimestamp);
+          return;
+        }
+        setErrorMessage('Offline mode: no cached data available.');
+      } else {
+        setErrorMessage('Failed to fetch todos. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [filters, isOnline, pagination.page]);
 
   useEffect(() => {
     fetchTodos();
@@ -119,7 +157,7 @@ const TodoPage: React.FC = () => {
           // 3秒后清除状态
           setTimeout(() => setAutoSaveStatus(''), 3000);
         } catch (error) {
-          console.error('Auto-save failed:', error);
+          devError('Auto-save failed:', error);
           setAutoSaveStatus('自动保存失败');
         }
       }
@@ -170,6 +208,10 @@ const TodoPage: React.FC = () => {
 
   const handleCreateTodoDirect = useCallback(async () => {
     if (!formData.title.trim()) return;
+    if (!isOnline) {
+      setErrorMessage('Offline mode: please reconnect before creating new items.');
+      return;
+    }
 
     try {
       const submitData: TodoCreate = {
@@ -183,12 +225,12 @@ const TodoPage: React.FC = () => {
         content: formData.content.trim() || undefined,
       };
 
-      console.log('=== CREATING TODO ===');
-      console.log('Submit data:', submitData);
+      devLog('=== CREATING TODO ===');
+      devLog('Submit data:', submitData);
       
       const createdTodo = await todoAPI.createTodo(submitData);
-      console.log('=== TODO CREATED ===');
-      console.log('Created todo:', createdTodo);
+      devLog('=== TODO CREATED ===');
+      devLog('Created todo:', createdTodo);
       
       // 重置表单
       resetForm();
@@ -196,11 +238,12 @@ const TodoPage: React.FC = () => {
       // 直接刷新数据，不需要重置过滤条件
       await fetchTodos();
       
-      console.log('=== DATA REFRESHED ===');
+      devLog('=== DATA REFRESHED ===');
     } catch (error) {
-      console.error('Failed to create todo:', error);
+      devError('Failed to create todo:', error);
+      setErrorMessage('Failed to create todo. Please try again.');
     }
-  }, [formData, fetchTodos]);
+  }, [formData, fetchTodos, isOnline]);
 
   const handleSave = useCallback(() => {
     if (selectedTodo) {
@@ -226,6 +269,10 @@ const TodoPage: React.FC = () => {
   const handleCreateTodo = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title.trim()) return;
+    if (!isOnline) {
+      setErrorMessage('Offline mode: please reconnect before creating new items.');
+      return;
+    }
 
     try {
       const submitData: TodoCreate = {
@@ -239,12 +286,12 @@ const TodoPage: React.FC = () => {
         content: formData.content.trim() || undefined,
       };
 
-      console.log('=== CREATING TODO ===');
-      console.log('Submit data:', submitData);
+      devLog('=== CREATING TODO ===');
+      devLog('Submit data:', submitData);
       
       const createdTodo = await todoAPI.createTodo(submitData);
-      console.log('=== TODO CREATED ===');
-      console.log('Created todo:', createdTodo);
+      devLog('=== TODO CREATED ===');
+      devLog('Created todo:', createdTodo);
       
       // 重置表单
       resetForm();
@@ -252,15 +299,20 @@ const TodoPage: React.FC = () => {
       // 直接刷新数据，不需要重置过滤条件
       await fetchTodos();
       
-      console.log('=== DATA REFRESHED ===');
+      devLog('=== DATA REFRESHED ===');
     } catch (error) {
-      console.error('Failed to create todo:', error);
+      devError('Failed to create todo:', error);
+      setErrorMessage('Failed to create todo. Please try again.');
     }
   };
 
   const handleUpdateTodo = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedTodo || !formData.title.trim()) return;
+    if (!isOnline) {
+      setErrorMessage('Offline mode: please reconnect before updating items.');
+      return;
+    }
 
     try {
       const submitData: TodoUpdate = {
@@ -274,19 +326,20 @@ const TodoPage: React.FC = () => {
         content: formData.content.trim() || undefined,
       };
 
-      console.log('=== UPDATING TODO ===');
-      console.log('Update data:', submitData);
+      devLog('=== UPDATING TODO ===');
+      devLog('Update data:', submitData);
       
       const updatedTodo = await todoAPI.updateTodo(selectedTodo.id, submitData);
-      console.log('=== TODO UPDATED ===');
-      console.log('Updated todo:', updatedTodo);
+      devLog('=== TODO UPDATED ===');
+      devLog('Updated todo:', updatedTodo);
       
       resetForm();
       await fetchTodos();
       
-      console.log('=== DATA REFRESHED ===');
+      devLog('=== DATA REFRESHED ===');
     } catch (error) {
-      console.error('Failed to update todo:', error);
+      devError('Failed to update todo:', error);
+      setErrorMessage('Failed to update todo. Please try again.');
     }
   };
 
@@ -294,20 +347,25 @@ const TodoPage: React.FC = () => {
     if (!confirm('确定要删除这个任务吗？')) return;
 
     try {
-      console.log('=== DELETING TODO ===');
-      console.log('Todo ID:', id);
+      if (!isOnline) {
+        setErrorMessage('Offline mode: please reconnect before deleting items.');
+        return;
+      }
+      devLog('=== DELETING TODO ===');
+      devLog('Todo ID:', id);
       
       await todoAPI.deleteTodo(id);
-      console.log('=== TODO DELETED ===');
+      devLog('=== TODO DELETED ===');
       
       if (selectedTodo?.id === id) {
         resetForm();
       }
       await fetchTodos();
       
-      console.log('=== DATA REFRESHED ===');
+      devLog('=== DATA REFRESHED ===');
     } catch (error) {
-      console.error('Failed to delete todo:', error);
+      devError('Failed to delete todo:', error);
+      setErrorMessage('Failed to delete todo. Please try again.');
     }
   };
 
@@ -377,6 +435,24 @@ const TodoPage: React.FC = () => {
   return (
     <div className="h-screen bg-gray-50 flex flex-col lg:flex-row">
       {/* 移动端顶部导航 */}
+      {/* Offline status banners */}
+      {isCacheFallback && (
+        <div className="w-full px-4 py-2 bg-amber-50 border-b border-amber-200 text-sm text-amber-900 flex flex-col gap-1 lg:flex-row lg:items-center lg:justify-between">
+          <span>Offline mode: showing the last synced data.</span>
+          {lastSyncedAt && (
+            <span className="text-xs text-amber-700 lg:text-sm">
+              Last synced {new Date(lastSyncedAt).toLocaleString()}
+            </span>
+          )}
+        </div>
+      )}
+
+      {errorMessage && (
+        <div className="w-full px-4 py-2 bg-red-50 border-b border-red-200 text-sm text-red-900">
+          {errorMessage}
+        </div>
+      )}
+
       <div className="lg:hidden bg-white border-b border-gray-200 p-4 flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <button
@@ -788,10 +864,12 @@ const TodoPage: React.FC = () => {
                     /* 阅读模式 - Markdown 渲染 */
                     <div className="absolute inset-0 px-6 py-4 overflow-y-auto">
                       {detectedFileType === FileType.MARKDOWN ? (
-                        <MarkdownRenderer 
-                          content={formData.content || formData.description || ''} 
-                          className="prose prose-gray max-w-none"
-                        />
+                        <Suspense fallback={<div className="text-sm text-gray-500">Markdown loading...</div>}>
+                          <MarkdownRenderer 
+                            content={formData.content || formData.description || ''} 
+                            className="prose prose-gray max-w-none"
+                          />
+                        </Suspense>
                       ) : (
                         /* 普通文本显示 */
                         <div 
@@ -1039,7 +1117,7 @@ const TodoPage: React.FC = () => {
         onNewItem={handleNewItem}
         onSearch={(query) => {
           // 可以在这里实现搜索功能
-          console.log('Search query:', query);
+          devLog('Search query:', query);
         }}
       />
     </div>

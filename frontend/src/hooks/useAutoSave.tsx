@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { devError } from '../utils/devLogger';
 
 interface UseAutoSaveOptions {
   data: any;
@@ -10,7 +11,7 @@ interface UseAutoSaveOptions {
 export const useAutoSave = ({ data, onSave, delay = 800, enabled = true }: UseAutoSaveOptions) => {
   const [status, setStatus] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedDataRef = useRef<any>(null);
 
   useEffect(() => {
@@ -32,7 +33,7 @@ export const useAutoSave = ({ data, onSave, delay = 800, enabled = true }: UseAu
         // 3秒后清除状态
         setTimeout(() => setStatus(''), 3000);
       } catch (error) {
-        console.error('自动保存失败:', error);
+        devError('自动保存失败:', error);
         setStatus('自动保存失败');
         setTimeout(() => setStatus(''), 5000);
       } finally {

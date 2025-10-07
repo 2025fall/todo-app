@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, AuthContextType } from '../types';
+import { devError } from '../utils/devLogger';
 import { authAPI } from '../utils/api';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,7 +29,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           const userData = await authAPI.getCurrentUser();
           setUser(userData);
         } catch (error) {
-          console.error('Failed to get user data:', error);
+          devError('Failed to get user data:', error);
           localStorage.removeItem('token');
           setToken(null);
         }
