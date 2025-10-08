@@ -446,7 +446,7 @@ const TodoPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col lg:flex-row">
+    <div className="min-h-screen bg-gray-50 flex flex-col lg:flex-row overflow-x-hidden">
       {/* 移动端顶部导航 */}
       {/* Offline status banners */}
       {isCacheFallback && (
@@ -689,15 +689,15 @@ const TodoPage: React.FC = () => {
       </div>
 
       {/* 右侧主内容区 - 全屏可编辑模式 */}
-      <div className="flex-1 flex flex-col bg-white min-w-0 h-full lg:h-auto">
+      <div className="flex-1 flex flex-col bg-white min-w-0 h-full lg:h-auto w-full">
         {selectedTodo ? (
           <div className="h-full flex flex-col">
             {/* Sticky 顶部工具栏 */}
             <div className="sticky top-0 bg-white/95 backdrop-blur border-b border-gray-100 px-4 sm:px-6 py-3 sm:py-4 z-10">
               <div className="flex flex-col gap-3 sm:gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap sm:gap-4">
+                <div className="flex flex-wrap items-center gap-3 sm:flex-nowrap sm:gap-4">
                   {/* 类型选择 */}
-                  <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap sm:gap-2">
+                  <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap sm:gap-2 w-full sm:w-auto">
                     {Object.values(ItemType).map((type) => (
                       <button
                         key={type}
@@ -719,7 +719,7 @@ const TodoPage: React.FC = () => {
                   <div className="hidden sm:block w-px h-6 bg-gray-200"></div>
                   
                   {/* 字体大小控制 */}
-                  <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                  <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap w-full sm:w-auto">
                     <span className="text-sm text-gray-500">字体:</span>
                     <div className="flex items-center space-x-1">
                       <button
@@ -739,7 +739,7 @@ const TodoPage: React.FC = () => {
                   </div>
                   
                   {/* 行间距控制 */}
-                  <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                  <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap w-full sm:w-auto">
                     <span className="text-sm text-gray-500">行距:</span>
                     <div className="flex items-center space-x-1">
                       <button
@@ -762,7 +762,7 @@ const TodoPage: React.FC = () => {
                   {selectedTodo && (
                     <>
                       <div className="hidden sm:block w-px h-6 bg-gray-200"></div>
-                      <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                      <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap w-full sm:w-auto">
                         <span className="text-sm text-gray-500">模式:</span>
                         <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
                           <button
@@ -826,7 +826,7 @@ const TodoPage: React.FC = () => {
                 </div>
                 
                 {/* 右侧操作按钮 */}
-                <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap sm:justify-end">
+                <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap sm:justify-end w-full lg:w-auto">
                   <div className="hidden lg:flex items-center space-x-1 text-xs text-gray-500">
                     <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-xs">⌘</kbd>
                     <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-xs">S</kbd>
@@ -933,9 +933,9 @@ const TodoPage: React.FC = () => {
             {/* 空状态时的顶部工具栏 */}
             <div className="sticky top-0 bg-white/95 backdrop-blur border-b border-gray-100 px-4 sm:px-6 py-3 sm:py-4 z-10">
               <div className="flex flex-col gap-3 sm:gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap sm:gap-4">
+                <div className="flex flex-wrap items-center gap-3 sm:flex-nowrap sm:gap-4">
                   {/* 类型选择 */}
-                  <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap sm:gap-2">
+                  <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap sm:gap-2 w-full sm:w-auto">
                     {Object.values(ItemType).map((type) => (
                       <button
                         key={type}
@@ -957,7 +957,7 @@ const TodoPage: React.FC = () => {
                   <div className="hidden sm:block w-px h-6 bg-gray-200"></div>
                   
                   {/* 字体大小控制 */}
-                  <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                  <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap w-full sm:w-auto">
                     <span className="text-sm text-gray-500">字体:</span>
                     <div className="flex items-center space-x-1">
                       <button
@@ -977,7 +977,7 @@ const TodoPage: React.FC = () => {
                   </div>
                   
                   {/* 行间距控制 */}
-                  <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                  <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap w-full sm:w-auto">
                     <span className="text-sm text-gray-500">行距:</span>
                     <div className="flex items-center space-x-1">
                       <button
@@ -1000,7 +1000,7 @@ const TodoPage: React.FC = () => {
                   {selectedTodo && (
                     <>
                       <div className="hidden sm:block w-px h-6 bg-gray-200"></div>
-                      <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                      <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap w-full sm:w-auto">
                         <span className="text-sm text-gray-500">模式:</span>
                         <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
                           <button
@@ -1064,7 +1064,7 @@ const TodoPage: React.FC = () => {
                 </div>
                 
                 {/* 右侧操作按钮 */}
-                <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap sm:justify-end">
+                <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap sm:justify-end w-full lg:w-auto">
                   <div className="hidden lg:flex items-center space-x-1 text-xs text-gray-500">
                     <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-xs">⌘</kbd>
                     <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-xs">S</kbd>
