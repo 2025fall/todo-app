@@ -187,7 +187,7 @@ const TodoPage: React.FC = () => {
     resetForm();
     setFormData(prev => ({ ...prev, type }));
     setShowCommandPalette(false);
-  }, []);
+  }, [setFormData]);
 
   const resetForm = () => {
     setFormData({
@@ -258,6 +258,19 @@ const TodoPage: React.FC = () => {
       resetForm();
     }
   }, [selectedTodo]);
+
+  const handleContentKeyDown = useCallback((event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === 'Enter' && !event.shiftKey && !event.metaKey && !event.ctrlKey && !event.altKey) {
+      event.preventDefault();
+      const textarea = event.currentTarget;
+      const { selectionStart, selectionEnd, value } = textarea;
+      const newValue = `${value.slice(0, selectionStart)}\n${value.slice(selectionEnd)}`;
+      setFormData(prev => ({ ...prev, content: newValue }));
+      requestAnimationFrame(() => {
+        textarea.selectionStart = textarea.selectionEnd = selectionStart + 1;
+      });
+    }
+  }, [setFormData]);
 
   useKeyboardShortcuts({
     onNewItem: () => setShowCommandPalette(true),
@@ -433,7 +446,7 @@ const TodoPage: React.FC = () => {
   };
 
   return (
-    <div className="h-screen bg-gray-50 flex flex-col lg:flex-row">
+    <div className="min-h-screen bg-gray-50 flex flex-col lg:flex-row">
       {/* 移动端顶部导航 */}
       {/* Offline status banners */}
       {isCacheFallback && (
@@ -680,7 +693,7 @@ const TodoPage: React.FC = () => {
         {selectedTodo ? (
           <div className="h-full flex flex-col">
             {/* Sticky 顶部工具栏 */}
-            <div className="sticky top-0 bg-white/95 backdrop-blur border-b border-gray-100 px-6 py-3 z-10">
+            <div className="sticky top-0 bg-white/95 backdrop-blur border-b border-gray-100 px-4 sm:px-6 py-3 sm:py-4 z-10">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                   {/* 类型选择 */}
@@ -847,7 +860,7 @@ const TodoPage: React.FC = () => {
                   <input
                     type="text"
                     required
-                    className="w-full px-6 py-4 text-2xl font-semibold bg-transparent border-none outline-none placeholder-gray-400"
+                    className="w-full px-4 sm:px-6 py-3 sm:py-4 text-xl sm:text-2xl font-semibold bg-transparent border-none outline-none placeholder-gray-400"
                     placeholder="输入标题..."
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
@@ -862,7 +875,7 @@ const TodoPage: React.FC = () => {
                 <div className="flex-1 relative">
                   {isReadMode ? (
                     /* 阅读模式 - Markdown 渲染 */
-                    <div className="absolute inset-0 px-6 py-4 overflow-y-auto">
+                    <div className="absolute inset-0 px-4 sm:px-6 py-3 sm:py-4 overflow-y-auto">
                       {detectedFileType === FileType.MARKDOWN ? (
                         <Suspense fallback={<div className="text-sm text-gray-500">Markdown loading...</div>}>
                           <MarkdownRenderer 
@@ -886,9 +899,10 @@ const TodoPage: React.FC = () => {
                   ) : (
                     /* 编辑模式 - 文本输入 */
                     <textarea
-                      className="w-full h-full px-6 py-4 resize-none border-none outline-none bg-transparent placeholder-gray-400"
+                      className="w-full h-full px-4 sm:px-6 py-3 sm:py-4 resize-none border-none outline-none bg-transparent placeholder-gray-400"
                       placeholder={formData.type === ItemType.TASK ? '详细描述任务内容...' : '输入内容...'}
                       value={formData.content}
+                    onKeyDown={handleContentKeyDown}
                       onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                       style={{
                         fontSize: `${editorSettings.fontSize}px`,
@@ -899,14 +913,14 @@ const TodoPage: React.FC = () => {
                   
                   {/* 自动保存状态 */}
                   {autoSaveStatus && !isReadMode && (
-                    <div className="absolute bottom-4 right-4 text-xs text-green-600 bg-green-50 px-3 py-1.5 rounded-lg shadow-sm border border-green-200">
+                    <div className="absolute bottom-3 sm:bottom-4 right-3 sm:right-4 text-xs text-green-600 bg-green-50 px-3 py-1.5 rounded-lg shadow-sm border border-green-200">
                       {autoSaveStatus}
                     </div>
                   )}
                   
                   {/* 阅读模式提示 */}
                   {isReadMode && (
-                    <div className="absolute bottom-4 right-4 text-xs text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg shadow-sm border border-blue-200">
+                    <div className="absolute bottom-3 sm:bottom-4 right-3 sm:right-4 text-xs text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg shadow-sm border border-blue-200">
                       阅读模式 - 点击"编辑"按钮进行修改
                     </div>
                   )}
@@ -917,7 +931,7 @@ const TodoPage: React.FC = () => {
         ) : (
           <div className="h-full flex flex-col">
             {/* 空状态时的顶部工具栏 */}
-            <div className="sticky top-0 bg-white/95 backdrop-blur border-b border-gray-100 px-6 py-3 z-10">
+            <div className="sticky top-0 bg-white/95 backdrop-blur border-b border-gray-100 px-4 sm:px-6 py-3 sm:py-4 z-10">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                   {/* 类型选择 */}
@@ -1075,7 +1089,7 @@ const TodoPage: React.FC = () => {
                   <input
                     type="text"
                     required
-                    className="w-full px-6 py-4 text-2xl font-semibold bg-transparent border-none outline-none placeholder-gray-400"
+                    className="w-full px-4 sm:px-6 py-3 sm:py-4 text-xl sm:text-2xl font-semibold bg-transparent border-none outline-none placeholder-gray-400"
                     placeholder="输入标题..."
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
@@ -1089,9 +1103,10 @@ const TodoPage: React.FC = () => {
                 {/* 内容编辑区域 */}
                 <div className="flex-1 relative">
                   <textarea
-                    className="w-full h-full px-6 py-4 resize-none border-none outline-none bg-transparent placeholder-gray-400"
+                    className="w-full h-full px-4 sm:px-6 py-3 sm:py-4 resize-none border-none outline-none bg-transparent placeholder-gray-400"
                     placeholder={formData.type === ItemType.TASK ? '详细描述任务内容...' : '输入内容...'}
                     value={formData.content}
+                    onKeyDown={handleContentKeyDown}
                     onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                     style={{
                       fontSize: `${editorSettings.fontSize}px`,
@@ -1100,7 +1115,7 @@ const TodoPage: React.FC = () => {
                   />
                   
                   {/* 创建提示 */}
-                  <div className="absolute bottom-4 left-6 text-xs text-gray-400">
+                  <div className="absolute bottom-3 sm:bottom-4 left-4 sm:left-6 text-xs text-gray-400">
                     输入内容后点击右上角"创建"按钮或使用 ⌘+S 保存
                   </div>
                 </div>
