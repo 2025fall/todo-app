@@ -694,16 +694,16 @@ const TodoPage: React.FC = () => {
           <div className="h-full flex flex-col">
             {/* Sticky 顶部工具栏 */}
             <div className="sticky top-0 bg-white/95 backdrop-blur border-b border-gray-100 px-4 sm:px-6 py-3 sm:py-4 z-10">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
+              <div className="flex flex-col gap-3 sm:gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap sm:gap-4">
                   {/* 类型选择 */}
-                  <div className="flex space-x-1">
+                  <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap sm:gap-2">
                     {Object.values(ItemType).map((type) => (
                       <button
                         key={type}
                         type="button"
                         onClick={() => setFormData({ ...formData, type })}
-                        className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                        className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap ${
                           formData.type === type
                             ? 'bg-blue-100 text-blue-700 border border-blue-200'
                             : 'text-gray-600 hover:bg-gray-100'
@@ -716,10 +716,10 @@ const TodoPage: React.FC = () => {
                   </div>
                   
                   {/* 分隔线 */}
-                  <div className="w-px h-6 bg-gray-200"></div>
+                  <div className="hidden sm:block w-px h-6 bg-gray-200"></div>
                   
                   {/* 字体大小控制 */}
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
                     <span className="text-sm text-gray-500">字体:</span>
                     <div className="flex items-center space-x-1">
                       <button
@@ -739,7 +739,7 @@ const TodoPage: React.FC = () => {
                   </div>
                   
                   {/* 行间距控制 */}
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
                     <span className="text-sm text-gray-500">行距:</span>
                     <div className="flex items-center space-x-1">
                       <button
@@ -761,8 +761,8 @@ const TodoPage: React.FC = () => {
                   {/* 阅读/编辑模式切换 */}
                   {selectedTodo && (
                     <>
-                      <div className="w-px h-6 bg-gray-200"></div>
-                      <div className="flex items-center space-x-2">
+                      <div className="hidden sm:block w-px h-6 bg-gray-200"></div>
+                      <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
                         <span className="text-sm text-gray-500">模式:</span>
                         <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
                           <button
@@ -800,9 +800,9 @@ const TodoPage: React.FC = () => {
                   {/* 只有任务类型才显示状态和优先级选择 */}
                   {formData.type === ItemType.TASK && (
                     <>
-                      <div className="w-px h-6 bg-gray-200"></div>
+                      <div className="hidden sm:block w-px h-6 bg-gray-200"></div>
                       <select
-                        className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
+                        className="w-full sm:w-auto px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
                         value={formData.status}
                         onChange={(e) => setFormData({ ...formData, status: e.target.value as TaskStatus })}
                       >
@@ -812,7 +812,7 @@ const TodoPage: React.FC = () => {
                       </select>
                       
                       <select
-                        className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
+                        className="w-full sm:w-auto px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
                         value={formData.priority}
                         onChange={(e) => setFormData({ ...formData, priority: e.target.value as Priority })}
                       >
@@ -826,7 +826,7 @@ const TodoPage: React.FC = () => {
                 </div>
                 
                 {/* 右侧操作按钮 */}
-                <div className="flex items-center space-x-2">
+                <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap sm:justify-end">
                   <div className="hidden lg:flex items-center space-x-1 text-xs text-gray-500">
                     <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-xs">⌘</kbd>
                     <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-xs">S</kbd>
@@ -932,16 +932,16 @@ const TodoPage: React.FC = () => {
           <div className="h-full flex flex-col">
             {/* 空状态时的顶部工具栏 */}
             <div className="sticky top-0 bg-white/95 backdrop-blur border-b border-gray-100 px-4 sm:px-6 py-3 sm:py-4 z-10">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
+              <div className="flex flex-col gap-3 sm:gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap sm:gap-4">
                   {/* 类型选择 */}
-                  <div className="flex space-x-1">
+                  <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap sm:gap-2">
                     {Object.values(ItemType).map((type) => (
                       <button
                         key={type}
                         type="button"
                         onClick={() => setFormData({ ...formData, type })}
-                        className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                        className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap ${
                           formData.type === type
                             ? 'bg-blue-100 text-blue-700 border border-blue-200'
                             : 'text-gray-600 hover:bg-gray-100'
@@ -954,10 +954,10 @@ const TodoPage: React.FC = () => {
                   </div>
                   
                   {/* 分隔线 */}
-                  <div className="w-px h-6 bg-gray-200"></div>
+                  <div className="hidden sm:block w-px h-6 bg-gray-200"></div>
                   
                   {/* 字体大小控制 */}
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
                     <span className="text-sm text-gray-500">字体:</span>
                     <div className="flex items-center space-x-1">
                       <button
@@ -977,7 +977,7 @@ const TodoPage: React.FC = () => {
                   </div>
                   
                   {/* 行间距控制 */}
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
                     <span className="text-sm text-gray-500">行距:</span>
                     <div className="flex items-center space-x-1">
                       <button
@@ -999,8 +999,8 @@ const TodoPage: React.FC = () => {
                   {/* 阅读/编辑模式切换 */}
                   {selectedTodo && (
                     <>
-                      <div className="w-px h-6 bg-gray-200"></div>
-                      <div className="flex items-center space-x-2">
+                      <div className="hidden sm:block w-px h-6 bg-gray-200"></div>
+                      <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
                         <span className="text-sm text-gray-500">模式:</span>
                         <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
                           <button
@@ -1038,9 +1038,9 @@ const TodoPage: React.FC = () => {
                   {/* 只有任务类型才显示状态和优先级选择 */}
                   {formData.type === ItemType.TASK && (
                     <>
-                      <div className="w-px h-6 bg-gray-200"></div>
+                      <div className="hidden sm:block w-px h-6 bg-gray-200"></div>
                       <select
-                        className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
+                        className="w-full sm:w-auto px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
                         value={formData.status}
                         onChange={(e) => setFormData({ ...formData, status: e.target.value as TaskStatus })}
                       >
@@ -1050,7 +1050,7 @@ const TodoPage: React.FC = () => {
                       </select>
                       
                       <select
-                        className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
+                        className="w-full sm:w-auto px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
                         value={formData.priority}
                         onChange={(e) => setFormData({ ...formData, priority: e.target.value as Priority })}
                       >
@@ -1064,7 +1064,7 @@ const TodoPage: React.FC = () => {
                 </div>
                 
                 {/* 右侧操作按钮 */}
-                <div className="flex items-center space-x-2">
+                <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap sm:justify-end">
                   <div className="hidden lg:flex items-center space-x-1 text-xs text-gray-500">
                     <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-xs">⌘</kbd>
                     <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-xs">S</kbd>
