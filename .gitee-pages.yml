@@ -1,0 +1,40 @@
+# Gitee Pages 自动部署配置
+name: Build and Deploy to Gitee Pages
+
+on:
+  push:
+    branches: [ feature/pwa-mobile ]
+  pull_request:
+    branches: [ feature/pwa-mobile ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+        
+    - name: Install dependencies
+      run: |
+        cd frontend
+        npm ci
+        
+    - name: Build
+      run: |
+        cd frontend
+        npm run build
+        
+    - name: Deploy to Gitee Pages
+      run: |
+        # 将构建结果复制到根目录用于Gitee Pages
+        cp -r frontend/dist/* .
+        # 创建.nojekyll文件
+        touch .nojekyll

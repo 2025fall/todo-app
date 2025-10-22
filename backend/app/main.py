@@ -59,7 +59,7 @@ def _build_allowed_origins() -> List[str]:
     return ordered
 
 allowed_origins = _build_allowed_origins()
-allow_origin_regex = os.getenv("CORS_ORIGIN_REGEX", r"https://.*\.vercel\.app")
+allow_origin_regex = os.getenv("CORS_ORIGIN_REGEX", r"https://.*\.gitee\.io")
 print(f"[INIT] Allowed CORS origins: {allowed_origins}")
 print(f"[INIT] Allowed CORS origin regex: {allow_origin_regex}")
 

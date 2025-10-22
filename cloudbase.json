@@ -1,0 +1,26 @@
+{
+  "envId": "{{env.ENV_ID}}",
+  "framework": {
+    "name": "fastapi",
+    "plugins": {
+      "node": {
+        "use": "@cloudbase/framework-plugin-node",
+        "inputs": {
+          "entry": "backend/app/main.py",
+          "name": "todo-api",
+          "path": "/api",
+          "runtime": "Python3.9",
+          "installCommand": "pip install -r requirements.txt",
+          "buildCommand": "",
+          "envVariables": {
+            "DATABASE_URL": "{{env.DATABASE_URL}}",
+            "SECRET_KEY": "{{env.SECRET_KEY}}",
+            "CORS_ORIGINS": "{{env.CORS_ORIGINS}}",
+            "PORT": "9000",
+            "HOST": "0.0.0.0"
+          }
+        }
+      }
+    }
+  }
+}
